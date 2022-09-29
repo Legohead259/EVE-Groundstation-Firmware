@@ -1,4 +1,6 @@
-#include "EVE_Filesystem.h"
+#include <FS.h>
+#include <SD.h>
+#include <SPI.h>
 
 #define DEBUG_SERIAL Serial // TODO: Declare this in a variants file
  

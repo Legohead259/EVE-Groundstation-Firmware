@@ -1,13 +1,5 @@
-#include <Arduino.h>
+#include "helpers/helper.h"
 #include <LoRa.h>
-#include <SPI.h>
-
-// LoRa Instantiation
-#define RFM_CS_PIN 38
-#define RFM_RST_PIN 0
-#define RFM_IRQ_PIN 33
-
-SPIClass LoRaSPI(FSPI);
 
 void setup() {
 	Serial.begin(115200);
@@ -16,7 +8,7 @@ void setup() {
 	// Initialize LoRa Radio
 	Serial.print("Initializing radio...");
     LoRa.setPins(RFM_CS_PIN, RFM_RST_PIN, RFM_IRQ_PIN);
-    LoRaSPI.begin(37, 36, 35, 38);
+    LoRaSPI.begin(FSPI_SCLK_PIN, FSPI_MISO_PIN, FSPI_MOSI_PIN, FSPI_CS_PIN);
     LoRa.setSPI(LoRaSPI);
     
     if (!LoRa.begin(915E6)) {
@@ -31,6 +23,7 @@ void setup() {
 	// if (!initSDCard()) { // Initialize filesystem and check if good
     //     // while(true) blinkCode(CARD_MOUNT_ERROR_CODE); // Block further code execution
     // }
+    Serial.println("Timestamp (ISO8601),voltage,GPSFix,numSats,HDOP,latitude (°),longitude (­°),speed (kts),course (°),barometer temp (°C),pressure (Pa),altitude AGL (m),sysCal,gyroCal,accelCal,magCal,accelX (m/s),accelY (m/s),accelZ (m/s),gyroX (rad/s),gyroY (rad/s),gyroZ (rad/s), roll (°), pitch (°), yaw (°),linAccelX (m/s),linAccelY (m/s),linAccelZ (m/s),imu temp (°C),sht temp (°C),humidity (%),state,packet size (b),period (s),frequency (Hz),RSSI (dB),dX (m),dY (m),displacement (m)");
 }
 
 void loop() {
@@ -38,15 +31,23 @@ void loop() {
     int packetSize = LoRa.parsePacket();
     if (packetSize) {
         // received a packet
-        Serial.print("Received packet '");
+        // Serial.print("Received packet '");
+        
+        byte UUID = LoRa.read(); // First byte is the Launchsonde UUID
+        byte destUUID = LoRa.read(); // Second byte is the destination UUID
+        byte packetType = LoRa.read(); // Third byte is the packet type
 
         // read packet
+        char _buf[sizeof(data)+1];
+        int i = 0;
         while (LoRa.available()) {
-        Serial.print((char)LoRa.read(), HEX);
+            char _byte = LoRa.read();
+            _buf[i] = _byte;
+            i++;
+            // Serial.print(_byte, HEX); // DEBUG
         }
+        memcpy(&data, _buf, sizeof(data)+1);
 
-        // print RSSI of packet
-        Serial.print("' with RSSI ");
-        Serial.println(LoRa.packetRssi());
+        printBaseStationTelemetry();
     }
 }
